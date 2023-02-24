@@ -90,13 +90,23 @@ export class DomainTransferPlugin extends Plugin {
       const { source } = draggedData
       const { target, targetView } = droppedData
 
+      if (!this.hasGenerator(source.domain, target.domain)) {
+        e.rejectAction()
+        return
+      }
+
       this.generate(source, target, targetView)
     }, {
       accept: '.other-canvas',
       actionDescription: (e, draggedData, droppedData) => {
         const { source } = draggedData
         const { target } = droppedData
-        return `Generate ${target.name} from ${source.name}`
+
+        if (!this.hasGenerator(source.domain, target.domain)) {
+          return ''
+        }
+
+        return `Generate ${target.domain} from ${source.domain}`
       },
       droppedData: (e) => {
         const aiPreviewDropzone = e.target
@@ -176,6 +186,10 @@ export class DomainTransferPlugin extends Plugin {
       // SHOULD NOT record the command, so it does not enter the ctrl+z/y stacks
       // editor.recordCommand(loadImageCommand)
     }
+  }
+
+  hasGenerator(sourceDomain, targetDomain) {
+    return !!this.model.selectGenerator(sourceDomain, targetDomain)
   }
 
   static get View() {
