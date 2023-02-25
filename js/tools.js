@@ -1,4 +1,4 @@
-import { BucketCommand, EraserCommand, LineCommand, RectangleCommand, PencilCommand } from "./commands.js"
+import { BucketCommand, EraserCommand, LineCommand, RectangleCommand, PencilCommand, PasteCommand } from "./commands.js"
 
 class Tool {
   #shouldDisableMenu
@@ -380,6 +380,76 @@ export class ColorPicker extends Tool {
     // tells the editor a primary or secondary color was selected
     if (this.specialColorSlot) {
       this.editor[this.specialColorSlot + 'Color'].set(chosenColor)
+    }
+  }
+}
+
+
+// class KeyboardTool {
+//   #shortcut
+
+//   constructor(shortcut) {
+//     this.#shortcut = Array.isArray(shortcut) ? shortcut : shortcut.split(' ')
+//   }
+
+//   attachToEditor(editor) {
+//     const doc = editor.containerEl.getRootNode()
+//     doc.addEventListener('paste', this.handleKeyboardTool)
+//   }
+
+//   handleKeyboardTool(e) {
+    
+//   }
+// }
+
+export class CanvasPaster {
+  constructor() {
+    this.execute = this.execute.bind(this)
+  }
+
+  attachToEditor(editor) {
+    this.editor = editor
+    const doc = editor.containerEl.getRootNode()
+    doc.addEventListener('paste', this.execute)
+  }
+
+  findImageInClipboard(e) {
+    const items = e.clipboardData?.items
+
+    if (!items?.length) {
+      return
+    }
+
+    return new Promise((resolve, reject) => {
+      for (let item of items) {
+        if (item.type.includes('image')) {
+          e.preventDefault()
+
+          const blob = item.getAsFile()
+          const imageAsUrl = window.URL.createObjectURL(blob)
+
+          const pastedImage = new Image()
+          pastedImage.addEventListener('load', () => {
+            resolve(pastedImage)
+          }, { once: true })
+          pastedImage.src = imageAsUrl
+
+          break
+        }
+      }
+    })
+  }
+
+  async execute(e) {
+    const image = await this.findImageInClipboard(e)
+
+    // the clipboard might or might not have an image...
+    // we only create a command if it's an image
+    if (image) {
+      e.preventDefault()
+      const command = new PasteCommand(image)
+      this.editor.executeCommand(command)
+      this.editor.recordCommand(command)
     }
   }
 }

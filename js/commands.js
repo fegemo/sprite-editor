@@ -183,3 +183,14 @@ export class BucketCommand extends Command {
     this.deconfigure(editor)
   }
 }
+
+export class PasteCommand extends Command {
+  constructor(image) {
+    super('paste', { image })
+  }
+
+  execute(editor) {
+    const image = this.params.image
+    editor.canvas.restore(image)
+  }
+}

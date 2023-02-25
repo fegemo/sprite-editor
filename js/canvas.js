@@ -55,7 +55,8 @@ export default class Canvas {
     if (imageData instanceof ImageData) {
       this.ctx.restore()
       this.ctx.putImageData(imageData, 0, 0)
-    } else if (imageData instanceof HTMLCanvasElement) {
+    } else if (imageData instanceof HTMLCanvasElement ||
+      imageData instanceof HTMLImageElement) {
       this.ctx.drawImage(imageData, 0, 0)
     }
   }

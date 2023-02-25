@@ -1,5 +1,5 @@
 import Canvas from './canvas.js'
-import { Pencil, Bucket, Eraser, Line, Rectangle, EyeDropper, ColorPicker } from './tools.js'
+import { Pencil, Bucket, Eraser, Line, Rectangle, EyeDropper, ColorPicker, CanvasPaster } from './tools.js'
 import { MultiCanvasPlugin } from './plugins/multi-canvas.js'
 import { DomainTransferPlugin } from './plugins/domain-transfer.js'
 import { Observable } from './observable.js'
@@ -50,8 +50,8 @@ class Editor extends EventTarget {
     }
   }
 
-  executeCommand(command) {
-    command.execute(this)
+  async executeCommand(command) {
+    await command.execute(this)
     const taintsMainCanvas = command.taintsCanvas
     if (taintsMainCanvas) {
       this.#notifyCanvasChange()
@@ -79,10 +79,14 @@ class Editor extends EventTarget {
     }
   }
 
-  replayCommands() {
+  async replayCommands() {
     this.canvas.clear()
-    this.#setupCommands.forEach(this.executeCommand.bind(this))
-    this.#executedCommands.forEach(this.executeCommand.bind(this))
+    for (let cmd of this.#setupCommands) {
+      await this.executeCommand(cmd)
+    }
+    for (let cmd of this.#executedCommands) {
+      await this.executeCommand(cmd)
+    }
   }
 
   addSetupCommand(command) {
@@ -235,6 +239,7 @@ const editor = new Editor(
     new EyeDropper(document.querySelectorAll('#eye-dropper-tool')),
     new ColorPicker('Primary Color', document.querySelectorAll('#primary-color'), '#7890e8'),
     new ColorPicker('Secondary Color', document.querySelectorAll('#secondary-color'), '#ffffff'),
+    new CanvasPaster()
   ],
   [64, 64]
 )
