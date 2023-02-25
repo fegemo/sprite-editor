@@ -9,6 +9,15 @@
   --ai-number-of-suggestion-lines: min(var(--ai-number-of-suggestions), 2);
   --ai-space-for-button: 50px;
   --ai-preview-size: calc((var(--other-canvas-size) - var(--ai-space-for-button)) / var(--ai-number-of-suggestion-lines));
+  position: relative;
+}
+
+#ai-section::before {
+  content: "Suggestions";
+  text-align: center;
+  position: absolute;
+  right: 0;
+  left: 0;
 }
 
 .ai-preview-multi-container {
