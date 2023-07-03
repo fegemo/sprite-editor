@@ -34,16 +34,14 @@ export const config = {
   stargan: {
     inputs: ['sourceImage', 'targetDomain'],
     name: 'stargan',
-    version: '',
-    checkpoints: [
-      {
-        get file() {
-          return `${modelUrlPrefix}pixel-sides-models/${this.name}/${this.version}/model.json`
-        },
-        source: DOMAINS.any,
-        target: DOMAINS.any
-      }
-    ],
+    version: 'all,301222',
+    get checkpoints() {
+      return [{
+          file: `${modelUrlPrefix}pixel-sides-models/${this.name}/${this.version}/model.json`,
+          source: DOMAINS.any,
+          target: DOMAINS.any
+        }]
+      },
     get endpoint() {
       return `/api/${this.name}/${this.version}/2/{target}`
     }
