@@ -126,11 +126,13 @@ export class LocalModel extends ModelProxy {
     return class GenerateLocallyTask extends AsyncTask {
       #generator
       #inputs
+      #inputTransforms
       #tf
 
       constructor(model, generator, tf, sourceDomain, targetDomain, backend = 'webgl', thread = 'ui', waitOn = []) {
         super([model.loaded, ...waitOn])
         this.#inputs = model.config.inputs
+        this.#inputTransforms = model.config.inputTransforms
         this.#generator = generator
         this.#tf = tf
 
@@ -146,36 +148,68 @@ export class LocalModel extends ModelProxy {
             case 'sourceImage':
               {
                 const offset = tf.scalar(127.5)
-                const normalizedSourceData = sourceData.div(offset).sub(tf.scalar(1))
+                // const normalizedSourceData = sourceData.div(offset).sub(tf.scalar(1))
+                const normalizedSourceData = tf.expandDims(sourceData.div(offset).sub(tf.scalar(1)), 0)
                 inputs.push(normalizedSourceData)
+              }
+              break
+
+            case 'targetDomain-channelized':
+              {
+                const domainsInOrder = ['back', 'left', 'front', 'right']
+                const targetIndex = domainsInOrder.indexOf(this.targetDomain) // e.g., 3
+                const oneHotTargetIndex = tf.oneHot([targetIndex], domainsInOrder.length) // e.g., [0, 0, 0, 1]
+                const channelizedTargetIndex = tf.tile(tf.reshape(oneHotTargetIndex, [1, 1, 1, 4]), [1, 64, 64, 1])
+                inputs.push(channelizedTargetIndex)
               }
               break
 
             case 'targetDomain':
               {
                 const domainsInOrder = ['back', 'left', 'front', 'right']
-                const targetIndex = domainsInOrder.indexOf(this.targetDomain) // 3
-                const oneHotTargetIndex = tf.oneHot([targetIndex], domainsInOrder.length) // [0, 0, 0, 1]
-                const channelizedTargetIndex = tf.tile(tf.expandDims(oneHotTargetIndex, 0), [64, 64, 1])
-                inputs.push(channelizedTargetIndex)
+                const targetIndex = domainsInOrder.indexOf(this.targetDomain) // e.g., 3
+                inputs.push(tf.tensor2d([targetIndex], [1, 1]))
+              }
+              break
+
+            case 'sourceDomain':
+              {
+                const domainsInOrder = ['back', 'left', 'front', 'right']
+                const sourceIndex = domainsInOrder.indexOf(this.sourceDomain) // e.g., 3
+                inputs.push(tf.tensor2d([sourceIndex], [1, 1]))
               }
               break
           }
         }
 
-        const input = tf.concat(inputs, -1)
-        return { input, channels: input.shape.at(-1) }
+        // processes any input transforms, such as concatenation of two+ inputs into a single along the channels axis
+        // (e.g., sourceImage and targetDomain-channelized on stargan-small)
+        if (!!this.#inputTransforms) {
+          for (let transform of this.#inputTransforms) {
+            switch (Object.keys(transform)[0]) {
+              case 'concat':
+                {
+                  const { inputs: inputNames, axis } = transform.concat
+                  const inputTensors = inputNames.map(name => inputs[this.#inputs.indexOf(name)])
+                  const concattedInput = tf.concat(inputTensors, axis)
+                  // replace the inputs with the concatted input
+                  inputs.splice(this.#inputs.indexOf(inputNames[0]), inputNames.length, concattedInput)
+                }
+                break
+            }
+          }
+        }
+
+        return inputs
       }
 
       async _execute(signal, sourceCanvasEl) {
         const generator = this.#generator
         const tf = this.#tf
         const generatedImage = tf.tidy(() => {
-          const { input, channels } = this.assembleInputs(tf.cast(tf.browser.fromPixels(sourceCanvasEl, 4), 'float32'))
-          const batchedSourceData = input.reshape([1, 64, 64, channels])
-
-          const t0 = tf.util.now();
-          const targetData = generator.predict(batchedSourceData, { training: true })
+          const inputs = this.assembleInputs(tf.cast(tf.browser.fromPixels(sourceCanvasEl, 4), 'float32'))
+          const t0 = tf.util.now()
+          const targetData = generator.predict(inputs)
           const ellapsed = tf.util.now() - t0;
           console.info(`Took ${ellapsed.toFixed(2)}ms to predict`)
 
