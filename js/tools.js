@@ -1,5 +1,21 @@
 import { BucketCommand, EraserCommand, LineCommand, RectangleCommand, PencilCommand, PasteCommand } from "./commands.js"
 
+/**
+ * Base class for tools in the editor.
+ * 
+ * Each tool must implement the following methods:
+ * - activated: called when the tool is activated (e.g., when the user clicks on the tool's button)
+ * - deactivated: called when the tool is deactivated (e.g., when the user clicks on another tool's button)
+ * 
+ * It *can* implement:
+ * - preActivation: called before the tool is activated (e.g., to save the state of the editor before
+ *     the tool is activated, such as the Eye Dropper, which saves which tool was active before it, to restore
+ *     it after the color is picked).
+ * 
+ * Each tool is a "command player", meaning it can execute commands on the canvas instead of directly
+ * changing the pixels. For instance, the Pencil tool creates a PencilCommand that registers the change of
+ * color of one or more pixels on the canvas. This allows for undo/redo functionality.
+ */
 class Tool {
   #shouldDisableMenu
 
@@ -12,6 +28,13 @@ class Tool {
     this.#shouldDisableMenu = shouldDisableMenu
   }
 
+  /**
+   * Called by the Editor itself to attach the tool to it (e.g., create a button in the toolbar).
+   * This does not need to be called by the user.
+   * This "default" implementation attaches the tool to the editor and adds the event listeners
+   * to the trigger elements. It also attaches a keyboard shortcut that activates the tool.
+   * @param {Editor} editor 
+   */
   attachToEditor(editor) {
     this.editor = editor
     if (!this.editor.tools) {
@@ -32,6 +55,10 @@ class Tool {
     }
   }
 
+  /**
+   * Called by the editor when a tool is activated (e.g., clicked on the toolbar, or its was hotkey pressed).
+   * This does not have to be called by the user.
+   */
   activate() {
     if (!this.editor) {
       throw new Error(`Activated a tool (${this.name}) which was not attached to any editor`)
@@ -55,6 +82,10 @@ class Tool {
     this.activated()
   }
 
+  /**
+   * Called by the editor when a tool is deactivated (e.g., another tool was activated).
+   * This does not have to be called by the user.
+   */
   deactivate() {
     if (!this.editor) {
       throw new Error(`Deactivated a tool (${this.name}) which was not attached to any editor`)
@@ -67,18 +98,33 @@ class Tool {
     this.deactivated()
   }
 
+  /**
+   * Called before the tool is activated. It can be used to save the state of the editor, to be restored later.
+   * Can be overriden.
+   */
   preActivation() {
     // allow tools to override
   }
 
+  /**
+   * Called when the tool is activated. Must be implemented by the tool.
+   */
   activated() {
     throw new Error('Called abstract method "activated" of the Tool')
   }
 
+  /**
+   * Called when the tool is deactivated. Must be implemented by the tool, even if empty.
+   */
   deactivated() {
     throw new Error('Called abstract method "deactivated" of the Tool')
   }
 
+  /**
+   * Simply disables the context menu appearing when right-clicking on the main canvas.
+   * @param {Event} e click event.
+   * @returns false, to prevent the default context menu from appearing.
+   */
   #disableContextMenu(e) {
     e.preventDefault()
     return false
@@ -91,17 +137,24 @@ export class Pencil extends Tool {
     this.draw = this.draw.bind(this)
   }
 
+  /**
+   * Draws on the canvas when the mouse is pressed (mousedown) and moved (mousemove).
+   * @param {Event} e mouse event (mousedown, mousemove, mouseup, mouseout). 
+   */
   draw(e) {
-    // consider only left/right buttons
+    // consider only left/right mouse buttons
     if (e.button !== 0 && e.button !== 2) {
       return
     }
 
     switch (e.type) {
       case 'mousedown':
+        // the mouse was pressed on the main canvas (hasn't been released yet)
         if (this.activelyDrawing) {
           return
         }
+        // saves the current canvas state (to restore it in case of Ctrl+Z),
+        // then creates a "pencil command" to define the color of the pixel being drawn
         this.savedCanvas = this.editor.canvas.save()
         this.command = this.commandBuilder(e)
         
@@ -110,6 +163,9 @@ export class Pencil extends Tool {
 
       case 'mouseout':
       case 'mouseup':
+        // when the button is realesead
+        // effectively executes the command to paint the pixel on the canvas and register the command
+        // as executed, so it can be undone/redone later, if requested by the user
         if (this.activelyDrawing) {
           this.editor.canvas.restore(this.savedCanvas)
           this.editor.executeCommand(this.command)
@@ -120,6 +176,10 @@ export class Pencil extends Tool {
         break
 
       case 'mousemove':
+        // if the mouse is moving while the button is pressed, we keep logging the new position of the
+        // mouse and defining the color of the pixel on the canvas
+        // the command.iterate() method is called to temporarily draw the pixel on the canvas, even before
+        // editor.executeCommand() is called, so the user gets an instant preview of the drawing
         if (this.activelyDrawing) {
           const position = this.editor.mousePosition
 
@@ -131,6 +191,10 @@ export class Pencil extends Tool {
   }
 
   commandBuilder(e) {
+    // creates a command to paint the pixel with either the color of the primary or secondary color
+    // this command will be executed when the mouse is released
+    // it starts with only the initial mouse position (when the button was pressed), but it can
+    // grow to include more positions as the mouse moves (by calling command.logPosition(newPosition)).
     const color = e.button == 0 ? this.editor.primaryColor.get() : this.editor.secondaryColor.get()
     return new PencilCommand(color, [this.editor.mousePosition])
   }
@@ -402,6 +466,11 @@ export class ColorPicker extends Tool {
 //   }
 // }
 
+
+/**
+ * Tool that allows pasting images (Ctrl+V) from the clipboard into the main canvas.
+ * TODO: add support for dragging images (from outside the page) into the canvas.
+ */
 export class CanvasPaster {
   constructor() {
     this.execute = this.execute.bind(this)

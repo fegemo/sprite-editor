@@ -1,6 +1,26 @@
 import { lineEFLA, equalPosition, floodFill } from './algorithms.js'
+import { Editor } from './editor.js'
 
+/**
+ * Represents a command that can be executed on the editor, for instance, to change
+ * specific pixels of the main canvas to some color (as is the case of the PencilCommand).
+ *  
+ * This is an abstract class and should not be instantiated directly.
+ * The `execute` method should be implemented by subclasses.
+ */
 export class Command {
+  /**
+   * 
+   * @param {string} name The name of the command (e.g., 'pencil', 'bucket').
+   * @param {object} params The parameters required to execute the command (e.g., 
+   *  the color and positions to paint).
+   * @param {boolean} taintsCanvas Whether the command taints the main canvas or not.
+   *  This is used as a hint to the editor to notify observers that the canvas has changed.
+   *  For instance, the MultiCanvasPlugin implements a 2-way data binding between the main
+   *  canvas and the other canvases. When the main canvas changes, the respective other canvas
+   *  should also change. However, if the command does not taint the canvas, the plugin does
+   *  not need to update the other canvases.
+   */
   constructor(name, params, taintsCanvas = true) {
     this.name = name
     this.params = params
@@ -12,22 +32,41 @@ export class Command {
   }
 }
 
+/**
+ * Represents a command that paints pixels on the canvas.
+ */
 export class PencilCommand extends Command {
+  /**
+   * Creates a new pencil command to define the color of some pixels.
+   * 
+   * @param {string} color The color used to paint the pixels.
+   * @param {Array} paintedPositions Array of pixel positions to paint. This list can grow
+   *  by calling the method logPosition(position).
+   */
   constructor(color, paintedPositions) {
     super('pencil', { color, paintedPositions })
     this.previousPosition = this.params.paintedPositions[0]
   }
 
   configure(editor) {
+    // saves the canvas state to restore it after the command is executed
     editor.canvas.ctx.save()
     editor.canvas.ctx.fillStyle = this.params.color
   }
   
   deconfigure(editor) {
+    // restores the canvas state to the previous state
     editor.canvas.ctx.restore()
   }
 
+  /**
+   * Executes the pencil command, effectively changing the colors of pixels on the canvas.
+   * @param {Editor} editor 
+   */
   execute(editor) {
+    // 1. saves the canvas state
+    // 2. iterates over the pixels to paint, setting the color of each one
+    // 3. restores the state
     this.configure(editor)
     this.previousPosition = this.params.paintedPositions[0]
     for (let position of this.params.paintedPositions) {
@@ -40,6 +79,8 @@ export class PencilCommand extends Command {
     if (equalPosition(position, this.previousPosition)) {
       editor.canvas.ctx.fillRect(position.x, position.y, 1, 1)
     } else {
+      // if there was a jump between the previous and current positions, instead of just filling the
+      // current pixel, we draw a line between the previous and the current positions
       lineEFLA((x, y) => editor.canvas.ctx.fillRect(x, y, 1, 1), this.previousPosition, position)
     }
     this.previousPosition = position
@@ -51,13 +92,20 @@ export class PencilCommand extends Command {
     this.deconfigure(editor)
   }
 
+  /**
+   * Registers a new pixel position to be painted.
+   * 
+   * @param {object} position An object containing x and y properties.
+   */
   logPosition(position) {
+    // saves a new position (x,y) into the list of painted positions
     if (equalPosition(this.previousPosition, position)) {
       return
     }
     this.params.paintedPositions.push(position)
   }
 }
+
 
 export class EraserCommand extends PencilCommand {
   constructor(color, erasedPositions) {
@@ -104,6 +152,15 @@ export class PenCommand extends Command {
   }
 }
 
+/**
+ * Represents a command that paints a polygon with two points (e.g., begin and end).
+ * 
+ * This is an abstract class and should not be instantiated directly.
+ * The `execute` method should be implemented by subclasses.
+ * 
+ * This class can be used by commands that require two points to define a polygon, such as
+ * LineCommand and RectangleCommand. Others could be CircleCommand, EllipseCommand, etc.
+ */
 class TwoPointPolygonCommand extends Command {
   constructor(color, startPosition, endPosition) {
     super('generic two line', { color, startPosition, endPosition })
