@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Just a simple graphics editor, without anything related to the generative models -->
+  <!-- The idea is to use this simple editor to test the basic image editing tools -->
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sprite Editor - Pixel Sides</title>
   <link rel="stylesheet" href="layout.css">
   <link rel="stylesheet" href="design.css">
-  <script defer src="js/main.js" type="module"></script>
 </head>
 <body>
   <main>
@@ -55,9 +56,32 @@
         </div>
       </aside>
     </section>
-    <section id="colateral-section">
-      <!-- multi-canvas plugin put canvases here -->
-    </section>
+    <!-- The multi-canvas plugin would put the extra canvases here -->
+    <!-- <section id="colateral-section">
+    </section> -->
   </main>
+  <script type="module">
+    import { Editor } from './js/editor.js'
+    import { Pencil, Bucket, Eraser, Line, Rectangle, EyeDropper, ColorPicker, CanvasPaster } from './js/tools.js'
+    
+    const containerEl = document.querySelector('#main-canvas-section')
+    const canvasEl = document.querySelector('#main-canvas')
+    const tools = [
+      new Pencil(document.querySelectorAll('#pencil-tool')),
+      new Bucket(document.querySelectorAll('#bucket-tool')),
+      new Eraser(document.querySelectorAll('#eraser-tool')),
+      new Line(document.querySelectorAll('#line-tool')),
+      new Rectangle(document.querySelectorAll('#rectangle-tool')),
+      new EyeDropper(document.querySelectorAll('#eye-dropper-tool')),
+      new ColorPicker('Primary Color', document.querySelectorAll('#primary-color'), '#7890e8'),
+      new ColorPicker('Secondary Color', document.querySelectorAll('#secondary-color'), '#ffffff'),
+      new CanvasPaster()
+    ]
+    const canvasSize = [64, 64]
+
+    const editor = new Editor(
+      containerEl, canvasEl, tools, canvasSize
+    )
+  </script>
 </body>
 </html>
