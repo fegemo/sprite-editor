@@ -1,4 +1,4 @@
-import { lineEFLA, equalPosition, floodFill } from './algorithms.js'
+import { lineEFLA, equalPosition, floodFill, bresenhamEllipse } from './algorithms.js'
 import { Editor } from './editor.js'
 
 /**
@@ -212,6 +212,37 @@ export class RectangleCommand extends TwoPointPolygonCommand {
     const ctx = editor.canvas.ctx
     ctx.fillRect(startPosition.x, startPosition.y, endPosition.x - startPosition.x, endPosition.y - startPosition.y)
     this.deconfigure(editor)
+  }
+}
+
+export class EllipseCommand extends TwoPointPolygonCommand {
+  constructor(color, start, end) {
+    super(color, start, end);
+    this.name = "ellipse";
+  }
+
+  execute(editor) {
+    this.configure(editor);
+
+    const startPosition = this.params.startPosition;
+    const endPosition = this.params.endPosition;
+    const ctx = editor.canvas.ctx;
+
+  
+    const width = Math.abs(endPosition.x - startPosition.x);
+    const height = Math.abs(endPosition.y - startPosition.y);
+    
+    //The center point of the ellipse is needed to draw the symmetric pixels given the pixels of the first quadrant, as the algorithm calculates only such coordinates.
+    const centerX = startPosition.x + Math.sign(endPosition.x - startPosition.x) * Math.floor(width / 2);
+    const centerY = startPosition.y + Math.sign(endPosition.y - startPosition.y) * Math.floor(height / 2);
+
+    //Ellipse's semi-major (a) and semi-minor (b) axes.
+    const radiusX = Math.floor(width / 2);
+    const radiusY = Math.floor(height / 2);
+
+    bresenhamEllipse(ctx, centerX, centerY, radiusX, radiusY, this.params.color);
+    
+    this.deconfigure(editor);
   }
 }
 
