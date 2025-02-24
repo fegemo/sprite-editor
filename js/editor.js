@@ -52,6 +52,7 @@ export class Editor extends EventTarget {
     const taintsMainCanvas = command.taintsCanvas
     if (taintsMainCanvas) {
       this.#notifyCanvasChange()
+      this.updateColorPalette()
     }
   }
 
@@ -170,6 +171,70 @@ export class Editor extends EventTarget {
     }
   }
 
+  updateColorPalette() {
+    const ctx = this.canvas.ctx;
+    const imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    
+    let colorPalette = document.querySelector("#swatch-list-section>div");
+
+    colorPalette.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    })
+
+    while(colorPalette.firstChild || false) {
+      colorPalette.removeChild(colorPalette.firstChild);
+    }
+
+    const colors = new Set();
+
+    for (let i = 0; i < imageData.data.length; i += 4) {
+
+      const r = imageData.data[i];
+      const g = imageData.data[i + 1];
+      const b = imageData.data[i + 2];
+      const a = imageData.data[i + 3];
+
+      if (a > 0) {
+        const rgb = `${r},${g},${b}`;
+        colors.add(rgb);
+      }
+    }
+
+    const uniqueColors = Array.from(colors);
+
+    for(let color of uniqueColors) {
+      let [r, g, b] = color.split(",")
+      let colorPaletteItem = document.createElement("div")
+
+      let span = document.createElement('span')
+      span.classList.add("tooltip")
+      let spanText = `rgb(${r}, ${g}, ${b})`
+      span.textContent = spanText
+
+      colorPaletteItem.appendChild(span)
+
+      colorPaletteItem.classList.add("color-palette-item")
+      colorPaletteItem.setAttribute("id", color)
+      colorPaletteItem.style.backgroundColor = spanText
+      colorPalette.appendChild(colorPaletteItem)
+    }
+
+    colorPalette.addEventListener("mousedown", (e) => this.updateColorPicker(e))
+  }
+
+    updateColorPicker(e) {
+    const clickedItem = e.target
+    const color = clickedItem.style.backgroundColor 
+    if(clickedItem.classList.contains("color-palette-item")) {
+      if(e.button === 0) {
+        this.primaryColor.set(color)
+      }
+      else if (e.button === 2) {
+        this.secondaryColor.set(color)
+      }
+    }
+  }
+
   get canvasSize() {
     return this.#canvasSize
   }
@@ -215,6 +280,26 @@ export class Editor extends EventTarget {
 
   get secondaryColorAsInt() {
     return Editor.hexToRGB(this.#secondaryColor.get())
+  }
+
+  get executedCommands() {
+    return this.#executedCommands
+  }
+
+  set executedCommands(item) {
+    this.#executedCommands.push(item)
+  }
+
+  get setupCommands() {
+    return this.#setupCommands
+  }
+
+  get undoneCommands() {
+    return this.#undoneCommands
+  }
+
+  set undoneCommands(item) {
+    this.#undoneCommands.push(item)
   }
 
   static hexToRGB(hex) {
