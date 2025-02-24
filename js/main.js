@@ -1,4 +1,4 @@
-import { Pencil, Bucket, Eraser, Line, Rectangle, EyeDropper, ColorPicker, CanvasPaster } from './tools.js'
+import { Pencil, Bucket, Eraser, Line, Rectangle, Ellipse, EyeDropper, ColorPicker, CanvasPaster, Undo, Redo } from './tools.js'
 import { MultiCanvasPlugin } from './plugins/multi-canvas.js'
 import { DomainTransferPlugin } from './plugins/domain-transfer.js'
 import { Editor } from './editor.js'
@@ -13,9 +13,12 @@ const editor = new Editor(
     new Eraser(document.querySelectorAll('#eraser-tool')),
     new Line(document.querySelectorAll('#line-tool')),
     new Rectangle(document.querySelectorAll('#rectangle-tool')),
+    new Ellipse(document.querySelectorAll('#ellipse-tool')),
     new EyeDropper(document.querySelectorAll('#eye-dropper-tool')),
     new ColorPicker('Primary Color', document.querySelectorAll('#primary-color'), '#7890e8'),
     new ColorPicker('Secondary Color', document.querySelectorAll('#secondary-color'), '#ffffff'),
+    new Undo(document.querySelectorAll('#undo-tool')),
+    new Redo(document.querySelectorAll('#redo-tool')),
     new CanvasPaster()
   ],
   [64, 64]                                          // resolution of the canvas (width, height)
