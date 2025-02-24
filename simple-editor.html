@@ -15,14 +15,20 @@
     <header id="page-header">
       <h1>Sprite Editor</h1>
     </header>
-    <section id="tools-section">
+    <section id="tools-section" class = "selectable">
       <ul id="tools" class="tool-list">
         <li id="pencil-tool">Pencil</li>
         <li id="eraser-tool">Eraser</li>
         <li id="bucket-tool">Bucket</li>
         <li id="line-tool">Line</li>
         <li id="rectangle-tool">Rectangle</li>
+        <li id="ellipse-tool">Ellipse</li>
         <li id="eye-dropper-tool">Eye dropper</li>
+        <li id="tool-placeholder"></li>
+      </ul>
+      <ul id="undo-redo-tools" class="tool-list">
+        <li id="undo-tool">Undo</li>
+        <li id="redo-tool">Redo</li>
       </ul>
       <ul id="colors" class="tool-list">
         <li id="primary-color" class="swatch">
@@ -32,18 +38,12 @@
           <input type="color" value="#000000">
         </li>
       </ul>
-      <ul id="pallete" class="swatch-list">
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-      </ul>
     </section>
     <section id="options-section"></section>
+    <section id="swatch-list-section" class="selectable">
+      <div>
+      </div>
+    </section>
     <section id="main-canvas-section">
       <canvas id="main-canvas" class="checkerboard-background"></canvas>
       <aside id="mouse-stats">
@@ -62,7 +62,7 @@
   </main>
   <script type="module">
     import { Editor } from './js/editor.js'
-    import { Pencil, Bucket, Eraser, Line, Rectangle, EyeDropper, ColorPicker, CanvasPaster } from './js/tools.js'
+    import { Pencil, Bucket, Eraser, Line, Rectangle, Ellipse, EyeDropper, ColorPicker, CanvasPaster, Undo, Redo } from './js/tools.js'
     
     const containerEl = document.querySelector('#main-canvas-section')
     const canvasEl = document.querySelector('#main-canvas')
@@ -72,9 +72,12 @@
       new Eraser(document.querySelectorAll('#eraser-tool')),
       new Line(document.querySelectorAll('#line-tool')),
       new Rectangle(document.querySelectorAll('#rectangle-tool')),
+      new Ellipse(document.querySelectorAll('#ellipse-tool')),
       new EyeDropper(document.querySelectorAll('#eye-dropper-tool')),
       new ColorPicker('Primary Color', document.querySelectorAll('#primary-color'), '#7890e8'),
       new ColorPicker('Secondary Color', document.querySelectorAll('#secondary-color'), '#ffffff'),
+      new Undo(document.querySelectorAll('#undo-tool')),
+      new Redo(document.querySelectorAll('#redo-tool')),
       new CanvasPaster()
     ]
     const canvasSize = [64, 64]

@@ -20,7 +20,32 @@
 body {
   background-color: var(--primary-bg-color);
   font-family: var(--sans-font);
-  color: var(--primary-text-color)
+  color: var(--primary-text-color);
+  cursor: url("/img/cursor-default.png"), auto
+}
+
+body.pencil-cursor {
+  cursor: url("/img/cursor-pencil.png") 0 16, auto;
+}
+
+body.line-cursor, body.rectangle-cursor, body.ellipse-cursor {
+  cursor: url("/img/cursor-crosshair-1.png") 8 8, auto;
+}
+
+body.bucket-cursor {
+  cursor: url("/img/cursor-bucket.png") 0 16, auto;
+}
+
+body.eye-dropper-cursor {
+  cursor: url("/img/cursor-eye-dropper.png") 0 16, auto;
+}
+
+body.eraser-cursor {
+  cursor: url("/img/cursor-eraser.png") 0 16, auto;
+}
+
+.selectable>ul>li, .selectable input, .selectable canvas, .selectable .color-palette-item {
+  cursor: url("/img/cursor-selection.png"), auto
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -28,7 +53,7 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0;
 }
 
-.tool-list>li {
+.tool-list>li, .color-palette-item {
   background-color: var(--tool-button-bg-color);
   position: relative;
 }
@@ -81,7 +106,17 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
 }
 
-#tools>li::after {
+#undo-redo-tools>li, #ellipse-tool {
+  background-size: 60%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+#undo-redo-tools>li:active {
+  border: var(--active-tool-border-width) solid var(--highlight-fg-color);
+}
+
+#tools>li::after, #undo-redo-tools>li::after {
   content: attr(data-shortcut);
   display: block;
   font-size: 8px;
@@ -89,7 +124,9 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 1em;
+  width: max-content;
+  padding-left: 0.2em;
+  padding-right: 0.2em;
   height: 1em;
   z-index: 100;
   text-indent: initial;
@@ -99,7 +136,7 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
 }
 
-#tools>li.active-tool::after {
+#tools>li.active-tool::after, #undo-redo-tools>li.active-tool::after {
   transform: translate(calc(-1 * var(--active-tool-border-width)), calc(-1 * var(--active-tool-border-width)));
 }
 
@@ -125,4 +162,47 @@ h1, h2, h3, h4, h5, h6 {
 
 #eye-dropper-tool {
   background-image: url(img/eye-dropper.png);
+}
+
+#undo-tool {
+  background-image: url(img/undo.png);
+}
+
+#redo-tool {
+  background-image: url(img/redo.png);
+}
+
+#ellipse-tool {
+  background-image: url(img/ellipse.png);
+}
+
+.color-palette-item .tooltip{
+  visibility: hidden;
+  width: max-content;
+  background-color: black;
+  text-align: center;
+  border-radius: 6px;
+  padding: 2px;
+  position: absolute;
+  display: inline-block;
+  bottom:175%;
+  z-index: 1;
+  font-size: 12px;
+  white-space: nowrap;
+  width: auto;
+}
+
+.color-palette-item:hover .tooltip{
+  visibility: visible;
+}
+
+.tooltip::after {
+  content: " ";
+  position: absolute;
+  top: 100%;
+  left: 8%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: black transparent transparent transparent;
 }
