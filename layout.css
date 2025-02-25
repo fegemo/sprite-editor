@@ -3,6 +3,7 @@
   --header-height: 60px;
   --gap: 2px;
   --color-palette-item: 14px;
+  --max-toolbar-width: calc(3 * var(--tool-button-size));
 }
 
 body {
@@ -12,8 +13,8 @@ body {
 main {
   height: 100vh;
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  grid-template-rows: var(--header-height) auto 1fr 1fr;
+  grid-template-columns: var(--max-toolbar-width) 1fr auto;
+  grid-template-rows: var(--header-height) auto 1fr;
 }
 
 #page-header {
@@ -27,12 +28,12 @@ main {
 }
 
 #main-canvas-section {
-  grid-row: 2 / 5;
+  grid-row: 2 / 4;
   grid-column: 2 / 3;
 }
 
 #colateral-section {
-  grid-row: 2 / 5;
+  grid-row: 2 / 4;
   grid-column: 3 / 4;
 }
 
@@ -42,26 +43,17 @@ main {
 }
 
 #swatch-list-section {
-  grid-row: 4 / 4;
+  grid-row: 3 / 4;
   grid-column: 1 / 2;
-  align-content: flex-end;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
 #swatch-list-section>div {
-  max-width: calc(3* var(--tool-button-size));
-  position: relative;
-  overflow-wrap: break-word;
-  box-sizing: border-box;
   padding: 14%;
-  padding-top: 5%;
-  padding-bottom: 5%;
-  overflow-y: auto;
-  height: calc(2* var(--tool-button-size));
-  margin-bottom: 5%;
   display: flex;
   flex-wrap: wrap;
   gap: var(--gap);
-  align-content: center;
   overflow: visible;
 }
 
@@ -83,7 +75,7 @@ main {
 .tool-list {
   padding-left: 0;
   list-style-type: none;
-  max-width: calc(3 * var(--tool-button-size));
+  max-width: var(--max-toolbar-width);
   display: flex;
   flex-wrap: wrap;
   gap: var(--gap);
@@ -116,3 +108,16 @@ main {
   text-align: center;
 }
 
+#popupables {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.palette-tooltip {
+  position: fixed;
+  left: anchor(left);
+  bottom: calc(anchor(top) + 10px);
+  width: max-content;
+  visibility: hidden;
+}

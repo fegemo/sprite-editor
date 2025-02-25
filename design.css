@@ -176,32 +176,21 @@ h1, h2, h3, h4, h5, h6 {
   background-image: url(img/ellipse.png);
 }
 
-.color-palette-item .tooltip{
-  visibility: hidden;
-  width: max-content;
-  background-color: black;
-  text-align: center;
-  border-radius: 6px;
-  padding: 2px;
-  position: absolute;
+.palette-tooltip {
   display: inline-block;
-  bottom:175%;
-  z-index: 1;
-  font-size: 12px;
+  padding: 0.5em;
+  font-size: 0.6rem;
+  border-radius: 6px;
+  text-align: center;
   white-space: nowrap;
-  width: auto;
+  background-color: black;
 }
 
-.color-palette-item:hover .tooltip{
-  visibility: visible;
-}
-
-.tooltip::after {
+.palette-tooltip::after {
   content: " ";
   position: absolute;
-  top: 100%;
-  left: 8%;
-  margin-left: -5px;
+  top: calc(100% - 1px);
+  left: 4%;
   border-width: 5px;
   border-style: solid;
   border-color: black transparent transparent transparent;
