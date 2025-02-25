@@ -1,5 +1,7 @@
 import Canvas from './canvas.js'
 import { Observable } from './observable.js'
+import { rgbToHex } from './colors.js'
+import { callOrReturn } from './functional-util.js'
 
 export class Editor extends EventTarget {
   #zoom
@@ -33,6 +35,8 @@ export class Editor extends EventTarget {
     this.zoom = 1
 
     this.containerEl.ownerDocument.defaultView.addEventListener('keydown', this.keyboardMultiplexer.bind(this))
+
+    this.configureColorPalette()
   }
 
   updateMouseStats(info) {
@@ -49,9 +53,14 @@ export class Editor extends EventTarget {
 
   async executeCommand(command) {
     await command.execute(this)
-    const taintsMainCanvas = command.taintsCanvas
-    if (taintsMainCanvas) {
+    // TODO: the 'maybe' should somehow check if the canvas was actually changed...
+    // implementing this could improve performance for some operations, but it may be
+    // negligible for most cases
+    const shouldNotifyOfCanvasChange = command.taintsCanvas in [true, 'always', 'maybe']
+      || callOrReturn(command, 'taintsCanvas', false, [this.canvas])
+    if (shouldNotifyOfCanvasChange) {
       this.#notifyCanvasChange()
+      this.updateColorPalette()
     }
   }
 
@@ -170,6 +179,76 @@ export class Editor extends EventTarget {
     }
   }
 
+  configureColorPalette() {
+    // setup basic event handlers for the color palette:
+    const paletteEl = document.querySelector('#swatch-list-section > div')
+
+    // (0) right-clicking disables the contextmenu
+    paletteEl.addEventListener('contextmenu', (e) => e.preventDefault())
+
+    // (1) clicking on a color sets it as the primary or secondary color
+    paletteEl.addEventListener('mousedown', (e) => {
+      const clickedItem = e.target
+      const color = rgbToHex(...clickedItem.dataset.color.split(',').map(x => parseInt(x)))
+      if (clickedItem.classList.contains('color-palette-item')) {
+        if (e.button === 0) {
+          this.primaryColor = color
+        } else if (e.button === 2) {
+          this.secondaryColor = color
+        }
+      }
+    })
+
+    // (2) hovering it shows the color in a tooltip
+    const tooltipEl = document.querySelector('.palette-tooltip')
+    paletteEl.addEventListener('mouseover', (e) => {
+      if (!e.target.classList.contains('color-palette-item')) return
+      const [r, g, b] = e.target.dataset.color.split(',')
+      tooltipEl.textContent = `rgb(${r}, ${g}, ${b})`
+      tooltipEl.style.positionAnchor = `--palette-color-${r}-${g}-${b}`
+      tooltipEl.style.visibility = 'visible'
+    })
+
+    paletteEl.addEventListener('mouseout', (e) => {
+      tooltipEl.style.visibility = 'hidden'
+    })
+  }
+
+  updateColorPalette() {
+    const ctx = this.canvas.ctx;
+    const imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    
+    const colorPalette = document.querySelector('#swatch-list-section > div')
+    colorPalette.innerHTML = ''
+
+    const colors = new Set();
+    for (let i = 0; i < imageData.data.length; i += 4) {
+
+      const r = imageData.data[i];
+      const g = imageData.data[i + 1];
+      const b = imageData.data[i + 2];
+      const a = imageData.data[i + 3];
+
+      if (a > 0) {
+        const rgb = `${r},${g},${b}`;
+        colors.add(rgb);
+      }
+    }
+
+    const uniqueColors = Array.from(colors);
+
+    for(let color of uniqueColors) {
+      let [r, g, b] = color.split(',')
+      let colorPaletteItem = document.createElement('div')
+
+      colorPaletteItem.classList.add('color-palette-item')
+      colorPaletteItem.style.backgroundColor = `rgb(${color})`
+      colorPaletteItem.style.anchorName = `--palette-color-${r}-${g}-${b}`
+      colorPaletteItem.dataset.color = color
+      colorPalette.appendChild(colorPaletteItem)
+    }
+  }
+
   get canvasSize() {
     return this.#canvasSize
   }
@@ -215,6 +294,26 @@ export class Editor extends EventTarget {
 
   get secondaryColorAsInt() {
     return Editor.hexToRGB(this.#secondaryColor.get())
+  }
+
+  get executedCommands() {
+    return this.#executedCommands
+  }
+
+  set executedCommands(item) {
+    this.#executedCommands.push(item)
+  }
+
+  get setupCommands() {
+    return this.#setupCommands
+  }
+
+  get undoneCommands() {
+    return this.#undoneCommands
+  }
+
+  set undoneCommands(item) {
+    this.#undoneCommands.push(item)
   }
 
   static hexToRGB(hex) {

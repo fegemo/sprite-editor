@@ -2,6 +2,8 @@
   --tool-button-size: 54px;
   --header-height: 60px;
   --gap: 2px;
+  --color-palette-item: 14px;
+  --max-toolbar-width: calc(3 * var(--tool-button-size));
 }
 
 body {
@@ -11,7 +13,7 @@ body {
 main {
   height: 100vh;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: var(--max-toolbar-width) 1fr auto;
   grid-template-rows: var(--header-height) auto 1fr;
 }
 
@@ -40,6 +42,28 @@ main {
   grid-column: 1 / 2;
 }
 
+#swatch-list-section {
+  grid-row: 3 / 4;
+  grid-column: 1 / 2;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+#swatch-list-section>div {
+  padding: 14%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  overflow: visible;
+}
+
+.color-palette-item {
+  width: var(--color-palette-item);
+  height: var(--color-palette-item);
+  position: relative;
+  overflow: visible;
+}
+
 #main-canvas-section {
   display: flex;
   justify-content: center;
@@ -51,7 +75,7 @@ main {
 .tool-list {
   padding-left: 0;
   list-style-type: none;
-  max-width: calc(3 * var(--tool-button-size));
+  max-width: var(--max-toolbar-width);
   display: flex;
   flex-wrap: wrap;
   gap: var(--gap);
@@ -68,6 +92,12 @@ main {
   list-style-type: none;
 }
 
+#tool-placeholder {
+  width: var(--tool-button-size);
+  height: var(--tool-button-size);
+  visibility: hidden;
+}
+
 #mouse-stats {
   position: absolute;
   right: 1rem;
@@ -78,3 +108,16 @@ main {
   text-align: center;
 }
 
+#popupables {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.palette-tooltip {
+  position: fixed;
+  left: anchor(left);
+  bottom: calc(anchor(top) + 10px);
+  width: max-content;
+  visibility: hidden;
+}

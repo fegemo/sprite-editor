@@ -1,4 +1,5 @@
-import { BucketCommand, EraserCommand, LineCommand, RectangleCommand, PencilCommand, PasteCommand } from "./commands.js"
+import { rgbToHex } from "./colors.js"
+import { BucketCommand, EraserCommand, LineCommand, RectangleCommand, PencilCommand, PasteCommand, EllipseCommand } from "./commands.js"
 
 /**
  * Base class for tools in the editor.
@@ -17,24 +18,22 @@ import { BucketCommand, EraserCommand, LineCommand, RectangleCommand, PencilComm
  * color of one or more pixels on the canvas. This allows for undo/redo functionality.
  */
 class Tool {
-  #shouldDisableMenu
-
-  constructor(name, exclusionGroup, triggerElements, shortcut, shouldDisableMenu = true) {
+  constructor(name, exclusionGroup, triggerElements, shortcut) {
     this.name = name
     this.exclusionGroup = exclusionGroup
     this.active = false
     this.els = triggerElements
     this.shortcut = shortcut
-    this.#shouldDisableMenu = shouldDisableMenu
   }
 
-  /**
+    /**
    * Called by the Editor itself to attach the tool to it (e.g., create a button in the toolbar).
    * This does not need to be called by the user.
    * This "default" implementation attaches the tool to the editor and adds the event listeners
    * to the trigger elements. It also attaches a keyboard shortcut that activates the tool.
    * @param {Editor} editor 
    */
+
   attachToEditor(editor) {
     this.editor = editor
     if (!this.editor.tools) {
@@ -44,21 +43,43 @@ class Tool {
       this.editor.tools.append(this)
     }
 
-    this.els.forEach(el => el.addEventListener('click', this.activate.bind(this)))
+    this.els.forEach(el => el.addEventListener('click', this.execute.bind(this)))
     if (this.shortcut) {
       this.editor.containerEl.ownerDocument.addEventListener('keyup', e => {
         if (e.key.toLowerCase() === this.shortcut.toLowerCase()) {
-          this.activate()
+          this.execute()
         }
       })
       this.els.forEach(el => el.dataset.shortcut = this.shortcut)
     }
   }
 
+  execute() {
+    // allow tools to override
+  }
+}
+
+class ActivatableTool extends Tool {
+  #shouldDisableMenu
+
+  constructor(name, exclusionGroup, triggerElements, shortcut, cursorClass, shouldDisableMenu = true) {
+    super(name, exclusionGroup, triggerElements, shortcut)
+    this.cursorClass = cursorClass
+    this.#shouldDisableMenu = shouldDisableMenu
+  }
+
   /**
-   * Called by the editor when a tool is activated (e.g., clicked on the toolbar, or its was hotkey pressed).
-   * This does not have to be called by the user.
-   */
+ * Called by the Editor itself to attach the tool to it (e.g., create a button in the toolbar).
+ * This does not need to be called by the user.
+ * This "default" implementation attaches the tool to the editor and adds the event listeners
+ * to the trigger elements. It also attaches a keyboard shortcut that activates the tool.
+ * @param {Editor} editor 
+ */
+
+  execute() {
+    this.activate()
+  }
+
   activate() {
     if (!this.editor) {
       throw new Error(`Activated a tool (${this.name}) which was not attached to any editor`)
@@ -80,6 +101,7 @@ class Tool {
     }
 
     this.activated()
+    this.setToolCursor()
   }
 
   /**
@@ -95,7 +117,9 @@ class Tool {
     }
     this.active = false
     this.els.forEach(el => el.classList.remove('active-tool'))
+
     this.deactivated()
+    this.setToolCursor()
   }
 
   /**
@@ -120,20 +144,68 @@ class Tool {
     throw new Error('Called abstract method "deactivated" of the Tool')
   }
 
-  /**
+  setToolCursor() {
+    let body = document.querySelector("body")
+    
+    const cursorClasses = [...body.classList].filter(cls => cls.endsWith("-cursor"))
+    body.classList.remove(...cursorClasses)
+
+    body.classList.add(this.cursorClass)
+  }
+
+    /**
    * Simply disables the context menu appearing when right-clicking on the main canvas.
    * @param {Event} e click event.
    * @returns false, to prevent the default context menu from appearing.
    */
-  #disableContextMenu(e) {
-    e.preventDefault()
-    return false
+    #disableContextMenu(e) {
+      e.preventDefault()
+      return false
+    }
+}
+
+export class Undo extends Tool {
+  constructor(elements) {
+    super('Undo', 'regular-tools', elements, "Ctrl+Z")
+    this.undo = this.undo.bind(this)
+  }
+
+  undo(e) {
+    const undone = this.editor.executedCommands.pop()
+    if (undone) {
+      this.editor.undoneCommands.push(undone)
+      this.editor.replayCommands()
+    }
+  }
+  
+  execute() {
+    this.undo()
   }
 }
 
-export class Pencil extends Tool {
+export class Redo extends Tool {
   constructor(elements) {
-    super('Pencil', 'regular-tools', elements, 'P')
+    super('Redo', 'regular-tools', elements, "Ctrl+Y")
+    this.redo = this.redo.bind(this)
+  }
+
+  redo(e) {
+    const redone = this.editor.undoneCommands.pop()
+
+    if (redone) {
+      this.editor.executedCommands.push(redone)
+      this.editor.replayCommands()
+    }
+  }
+
+  execute() {
+    this.redo()
+  }
+}
+
+export class Pencil extends ActivatableTool {
+  constructor(elements) {
+    super('Pencil', 'regular-tools', elements, 'P', 'pencil-cursor')
     this.draw = this.draw.bind(this)
   }
 
@@ -219,6 +291,7 @@ export class Eraser extends Pencil {
     super(elements)
     this.name = 'Eraser'
     this.shortcut = 'E'
+    this.cursorClass = 'eraser-cursor'
   }
 
   commandBuilder() {
@@ -226,9 +299,9 @@ export class Eraser extends Pencil {
   }
 }
 
-export class Bucket extends Tool {
+export class Bucket extends ActivatableTool {
   constructor(elements) {
-    super('Bucket', 'regular-tools', elements, 'B')
+    super('Bucket', 'regular-tools', elements, 'B', 'bucket-cursor')
     this.draw = this.draw.bind(this)
   }
 
@@ -248,7 +321,7 @@ export class Bucket extends Tool {
   }
 }
 
-class TwoPointPolygon extends Tool {
+class TwoPointPolygon extends ActivatableTool {
   constructor(elements) {
     super('Two Point Polygon', 'regular-tools', elements)
     this.draw = this.draw.bind(this)
@@ -308,6 +381,7 @@ export class Line extends TwoPointPolygon {
     super(elements)
     this.name = 'Line'
     this.shortcut = 'L'
+    this.cursorClass = 'line-cursor'
   }
 
   commandBuilder(e) {
@@ -325,6 +399,7 @@ export class Rectangle extends TwoPointPolygon {
     super(elements)
     this.name = 'Rectangle'
     this.shortcut = 'R'
+    this.cursorClass = 'rectangle-cursor'
   }
 
   commandBuilder(e) {
@@ -337,9 +412,27 @@ export class Rectangle extends TwoPointPolygon {
   }
 }
 
-export class EyeDropper extends Tool {
+export class Ellipse extends TwoPointPolygon {
   constructor(elements) {
-    super('Eye Dropper', 'regular-tools', elements, 'D')
+    super(elements)
+    this.name = 'Ellipse'
+    this.shortcut = 'C'
+    this.cursorClass = 'ellipse-cursor'
+  }
+
+  commandBuilder(e) {
+    const primaryOrSecondary = e.button === 0 ? 'primary' : 'secondary'
+    return new EllipseCommand(
+      this.editor[primaryOrSecondary + 'Color'].get(),
+      this.editor.mousePosition,
+      this.editor.mousePosition
+    )
+  }
+}
+
+export class EyeDropper extends ActivatableTool {
+  constructor(elements) {
+    super('Eye Dropper', 'regular-tools', elements, 'D', 'eye-dropper-cursor')
     this.pickColor = this.pickColor.bind(this)
   }
 
@@ -360,7 +453,8 @@ export class EyeDropper extends Tool {
         if (this.picking) {
           const { x, y } = this.editor.mousePosition
           const [r, g, b, a] = this.editor.canvas.ctx.getImageData(x, y, 1, 1).data
-          this.editor[this.primaryOrSecondary + 'Color'].set(`rgba(${r}, ${g}, ${b}, ${a})`)
+          const colorInHex = rgbToHex(r, g, b)
+          this.editor[this.primaryOrSecondary + 'Color'] = colorInHex
         }
         break
 
@@ -375,7 +469,7 @@ export class EyeDropper extends Tool {
       case 'mouseout':
         if (this.picking) {
           this.picking = false
-          this.editor[this.primaryOrSecondary + 'Color'].set(this.savedColor)
+          this.editor[this.primaryOrSecondary + 'Color'] = this.savedColor
         }
     }
   }
@@ -425,8 +519,12 @@ export class ColorPicker extends Tool {
     //  changes the primary/secondary color outside here)
     if (this.specialColorSlot) {
       this.editor[this.specialColorSlot + 'Color'].addListener((value) => {
-        // sets the swatch bg color accordingly
-        this.inputs.forEach(el => el.closest('.swatch').style.backgroundColor = value)
+        this.inputs.forEach(el => {
+          // sets the swatch bg color accordingly
+          el.closest('.swatch').style.backgroundColor = value
+          // sets the value of the inputs themselves
+          el.value = value
+        })
       })
 
     }
@@ -437,13 +535,17 @@ export class ColorPicker extends Tool {
     this.deactivated()
   }
 
+  execute() {
+    this.activated()
+  }
+
   bindColor(e) {
     // gets the color selected by the user
     const chosenColor = e.currentTarget.value
 
     // tells the editor a primary or secondary color was selected
     if (this.specialColorSlot) {
-      this.editor[this.specialColorSlot + 'Color'].set(chosenColor)
+      this.editor[this.specialColorSlot + 'Color'] = chosenColor
     }
   }
 }

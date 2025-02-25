@@ -326,7 +326,7 @@ export class DomainTransferPlugin extends Plugin {
 
 class LoadImageCommand extends Command {
   constructor(image, canvas) {
-    super('load-image', { image, canvas }, false)
+    super('load-image', { image, canvas }, 'maybe')
   }
 
   execute(editor) {
