@@ -53,8 +53,12 @@ export class Editor extends EventTarget {
 
   async executeCommand(command) {
     await command.execute(this)
-    const taintsMainCanvas = command.taintsCanvas
-    if (taintsMainCanvas) {
+    // TODO: the 'maybe' should somehow check if the canvas was actually changed...
+    // implementing this could improve performance for some operations, but it may be
+    // negligible for most cases
+    const shouldNotifyOfCanvasChange = command.taintsCanvas in [true, 'always', 'maybe']
+      || callOrReturn(command, 'taintsCanvas', false, [this.canvas])
+    if (shouldNotifyOfCanvasChange) {
       this.#notifyCanvasChange()
       this.updateColorPalette()
     }

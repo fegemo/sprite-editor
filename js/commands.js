@@ -20,6 +20,12 @@ export class Command {
    *  canvas and the other canvases. When the main canvas changes, the respective other canvas
    *  should also change. However, if the command does not taint the canvas, the plugin does
    *  not need to update the other canvases.
+   *  It can be the following values:
+   *    - true: the command always taints the canvas
+   *    - false: the command never taints the canvas
+   *    - 'maybe': the command may or may not taint the canvas
+   *    - a function: a function that receives the editor and returns a boolean indicating if
+   * the canvas should be tainted or not.
    */
   constructor(name, params, taintsCanvas = true) {
     this.name = name

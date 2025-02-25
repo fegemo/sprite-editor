@@ -216,7 +216,7 @@ export class MultiCanvasPlugin extends Plugin {
       #multiCanvasPlugin
 
       constructor(multiCanvasPlugin, targetCanvas) {
-        super('activate canvas', { targetCanvas }, false)
+        super('activate canvas', { targetCanvas }, 'maybe')
         this.#multiCanvasPlugin = multiCanvasPlugin
       }
 
