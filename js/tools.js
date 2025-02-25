@@ -1,3 +1,4 @@
+import { rgbToHex } from "./colors.js"
 import { BucketCommand, EraserCommand, LineCommand, RectangleCommand, PencilCommand, PasteCommand, EllipseCommand } from "./commands.js"
 
 /**
@@ -452,7 +453,8 @@ export class EyeDropper extends ActivatableTool {
         if (this.picking) {
           const { x, y } = this.editor.mousePosition
           const [r, g, b, a] = this.editor.canvas.ctx.getImageData(x, y, 1, 1).data
-          this.editor[this.primaryOrSecondary + 'Color'].set(`rgba(${r}, ${g}, ${b}, ${a})`)
+          const colorInHex = rgbToHex(r, g, b)
+          this.editor[this.primaryOrSecondary + 'Color'] = colorInHex
         }
         break
 
@@ -467,7 +469,7 @@ export class EyeDropper extends ActivatableTool {
       case 'mouseout':
         if (this.picking) {
           this.picking = false
-          this.editor[this.primaryOrSecondary + 'Color'].set(this.savedColor)
+          this.editor[this.primaryOrSecondary + 'Color'] = this.savedColor
         }
     }
   }
@@ -517,8 +519,12 @@ export class ColorPicker extends Tool {
     //  changes the primary/secondary color outside here)
     if (this.specialColorSlot) {
       this.editor[this.specialColorSlot + 'Color'].addListener((value) => {
-        // sets the swatch bg color accordingly
-        this.inputs.forEach(el => el.closest('.swatch').style.backgroundColor = value)
+        this.inputs.forEach(el => {
+          // sets the swatch bg color accordingly
+          el.closest('.swatch').style.backgroundColor = value
+          // sets the value of the inputs themselves
+          el.value = value
+        })
       })
 
     }
@@ -539,7 +545,7 @@ export class ColorPicker extends Tool {
 
     // tells the editor a primary or secondary color was selected
     if (this.specialColorSlot) {
-      this.editor[this.specialColorSlot + 'Color'].set(chosenColor)
+      this.editor[this.specialColorSlot + 'Color'] = chosenColor
     }
   }
 }
